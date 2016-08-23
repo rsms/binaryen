@@ -789,6 +789,8 @@ void Asm2WasmBuilder::processAsm(Ref ast) {
   };
   PassRunner passRunner(&wasm);
   passRunner.add<FinalizeCalls>(this);
+  passRunner.add<AutoDrop>(); // FinalizeCalls may cause us to require additional drops
+  if (optimize) passRunner.add("vacuum"); // autodrop can add some garbage
   passRunner.run();
 
   // apply memory growth, if relevant
