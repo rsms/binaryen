@@ -523,7 +523,10 @@ void Asm2WasmBuilder::processAsm(Ref ast) {
     for (unsigned i = 1; i < body->size(); i++) {
       if (body[i][0] == DEFUN) numFunctions++;
     }
-    optimizingBuilder = std::unique_ptr<OptimizingIncrementalModuleBuilder>(new OptimizingIncrementalModuleBuilder(&wasm, numFunctions));
+    optimizingBuilder = std::unique_ptr<OptimizingIncrementalModuleBuilder>(new OptimizingIncrementalModuleBuilder(&wasm, numFunctions, [&](PassRunner& passRunner) {
+      // run autodrop first, before optimizations
+      passRunner.add<AutoDrop>();
+    }));
   }
 
   // first pass - do almost everything, but function imports and indirect calls
@@ -786,8 +789,6 @@ void Asm2WasmBuilder::processAsm(Ref ast) {
   };
   PassRunner passRunner(&wasm);
   passRunner.add<FinalizeCalls>(this);
-  passRunner.add<AutoDrop>();
-  if (optimize) passRunner.add("vacuum"); // autodrop can add some garbage
   passRunner.run();
 
   // apply memory growth, if relevant

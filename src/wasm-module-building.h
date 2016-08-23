@@ -73,6 +73,7 @@ static std::mutex debug;
 class OptimizingIncrementalModuleBuilder {
   Module* wasm;
   uint32_t numFunctions;
+  std::function<void (PassRunner&)> addPrePasses;
   Function* endMarker;
   std::atomic<Function*>* list;
   uint32_t nextFunction; // only used on main thread
@@ -86,7 +87,7 @@ class OptimizingIncrementalModuleBuilder {
 public:
   // numFunctions must be equal to the number of functions allocated, or higher. Knowing
   // this bounds helps avoid locking.
-  OptimizingIncrementalModuleBuilder(Module* wasm, Index numFunctions) : wasm(wasm), numFunctions(numFunctions), nextFunction(0), finishing(false) {
+  OptimizingIncrementalModuleBuilder(Module* wasm, Index numFunctions, std::function<void (PassRunner&)> addPrePasses) : wasm(wasm), numFunctions(numFunctions), addPrePasses(addPrePasses), nextFunction(0), finishing(false) {
     // prepare work list
     endMarker = new Function();
     list = new std::atomic<Function*>[numFunctions];
@@ -193,6 +194,7 @@ private:
 
   void optimizeFunction(Function* func) {
     PassRunner passRunner(wasm);
+    addPrePasses(passRunner);
     passRunner.addDefaultFunctionOptimizationPasses();
     passRunner.runFunction(func);
   }
